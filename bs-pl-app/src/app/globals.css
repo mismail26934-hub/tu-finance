@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f9fafb;
+  --foreground: #111827;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.group-toggle-btn {
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid #4b5563;
+  border-radius: 2px;
+  background: #ffffff;
+  color: #111827;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.group-toggle-btn:hover {
+  background: #f3f4f6;
+}
+
+.group-toggle-spacer {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
+  flex-shrink: 0;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    #e5e7eb 0%,
+    #f9fafb 40%,
+    #e5e7eb 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes shimmer-slide {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
