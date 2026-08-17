@@ -77,7 +77,12 @@ export async function POST(request: Request) {
     if (fs.existsSync(dest)) {
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
       backupName = `backup-${stamp}.xlsx`;
-      fs.copyFileSync(dest, path.join(backupDir, backupName));
+      const backupPath = path.join(
+        /* turbopackIgnore: true */
+        backupDir,
+        backupName
+      );
+      fs.copyFileSync(dest, backupPath);
     }
 
     fs.writeFileSync(dest, buffer);

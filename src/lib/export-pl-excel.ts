@@ -126,12 +126,10 @@ export function exportPLToExcel(
   ];
   worksheet["!outline"] = { above: false };
 
-  let maxLevel = 1;
-  const rowInfo: XLSX.RowInfo[] = [{ hpt: 18 }];
+  let rowInfo: XLSX.RowInfo[] = [{ hpt: 18 }];
 
   for (const row of rows) {
     const level = getOutlineLevel(row.label, parentMap);
-    maxLevel = Math.max(maxLevel, level);
     rowInfo.push({
       level,
       hidden: isHiddenByCollapsedAncestor(row.label, parentMap, collapsed),
@@ -186,9 +184,5 @@ export function exportPLToExcel(
 
   XLSX.writeFile(workbook, filename, {
     bookType: "xlsx",
-    sheetFormat: {
-      defaultRowHeight: 16,
-      outlineLevelRow: String(maxLevel),
-    },
   });
 }
