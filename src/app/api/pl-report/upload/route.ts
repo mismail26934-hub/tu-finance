@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 import * as XLSX from "xlsx";
-import { parsePLWorkbook } from "@/lib/parse-pl-excel";
+import { EXCEL_FILE_NAME } from "@/lib/excel-file";
 import {
-  EXCEL_FILE_NAME,
-  getExcelBackupDir,
-  getExcelFilePath,
-  getGuideFilePath,
-} from "@/lib/excel-file";
+  guideFileExists,
+  readGuideBuffer,
+  saveExcelUpload,
+} from "@/lib/excel-storage";
+import { parsePLWorkbook } from "@/lib/parse-pl-excel";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const MAX_SIZE_BYTES = 20 * 1024 * 1024;
 
@@ -49,8 +50,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const guidePath = getGuideFilePath();
-    if (!fs.existsSync(guidePath)) {
+    if (!guideFileExists()) {
       return NextResponse.json(
         { error: "Guide.xlsx tidak ditemukan di folder data/Guide" },
         { status: 400 }
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     }
 
     const report = parsePLWorkbook(buffer, {
-      guideBuffer: fs.readFileSync(guidePath),
+      guideBuffer: readGuideBuffer(),
     });
     if (!report.rows.length) {
       return NextResponse.json(
@@ -67,25 +67,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const dest = getExcelFilePath();
-    const dataDir = path.dirname(dest);
-    const backupDir = getExcelBackupDir();
-    fs.mkdirSync(dataDir, { recursive: true });
-    fs.mkdirSync(backupDir, { recursive: true });
-
-    let backupName: string | null = null;
-    if (fs.existsSync(dest)) {
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      backupName = `backup-${stamp}.xlsx`;
-      const backupPath = path.join(
-        /* turbopackIgnore: true */
-        backupDir,
-        backupName
-      );
-      fs.copyFileSync(dest, backupPath);
-    }
-
-    fs.writeFileSync(dest, buffer);
+    const { backupName } = saveExcelUpload(buffer);
 
     return NextResponse.json({
       ok: true,

@@ -1,35 +1,27 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
+import { EXCEL_FILE_NAME } from "@/lib/excel-file";
+import { readExcelBuffer, readGuideBuffer } from "@/lib/excel-storage";
 import {
   default2026PeriodFilter,
   parsePLWorkbook,
 } from "@/lib/parse-pl-excel";
-import {
-  EXCEL_FILE_NAME,
-  getExcelFilePath,
-  getGuideFilePath,
-} from "@/lib/excel-file";
 
-function readGuideBuffer(): Buffer | undefined {
-  const guidePath = getGuideFilePath();
-  if (!fs.existsSync(guidePath)) return undefined;
-  return fs.readFileSync(guidePath);
-}
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const year = searchParams.get("year") ?? "2026";
 
-    const filePath = getExcelFilePath();
-    if (!fs.existsSync(filePath)) {
+    const buffer = readExcelBuffer();
+    if (!buffer) {
       return NextResponse.json(
         { error: `Excel file not found at data/${EXCEL_FILE_NAME}` },
         { status: 404 }
       );
     }
 
-    const buffer = fs.readFileSync(filePath);
     const periodFilter =
       year === "all"
         ? undefined
