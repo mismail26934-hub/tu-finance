@@ -53,7 +53,7 @@ function MenuLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ActionsDropdown() {
+export function ActionsDropdown({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -180,13 +180,13 @@ export function ActionsDropdown() {
         onChange={onPickFile}
       />
 
-      <div className="relative" ref={menuRef}>
+      <div className="relative w-full sm:w-auto" ref={menuRef}>
         <button
           type="button"
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((prev) => !prev)}
-          className="inline-flex items-center gap-1.5 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50 sm:w-auto sm:justify-start"
         >
           Actions
           <span className="text-xs text-gray-500" aria-hidden>
@@ -197,7 +197,11 @@ export function ActionsDropdown() {
         {open && (
           <div
             role="menu"
-            className="absolute right-0 top-full z-30 mt-1 min-w-[220px] rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+            className={
+              embedded
+                ? "absolute left-0 right-0 top-full z-40 mt-1 rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+                : "absolute left-1/2 top-full z-30 mt-1 w-max min-w-[220px] max-w-[min(280px,calc(100vw-2rem))] -translate-x-1/2 rounded-md border border-gray-200 bg-white py-1 shadow-lg sm:left-auto sm:right-0 sm:translate-x-0"
+            }
           >
             <MenuItem onClick={() => inputRef.current?.click()}>
               Upload Excel
