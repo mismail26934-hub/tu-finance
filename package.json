@@ -1,11 +1,12 @@
 {
   "name": "bs-pl-app",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "engines": {
     "node": "20.x"
   },
   "scripts": {
+    "prebuild": "node scripts/verify-deploy-ready.mjs",
     "dev": "node node_modules/next/dist/bin/next dev",
     "build": "node node_modules/next/dist/bin/next build --webpack",
     "start": "node node_modules/next/dist/bin/next start -H 0.0.0.0 -p 3000",
