@@ -393,17 +393,21 @@ export function PLGroupedTable({ periods, rows }: PLGroupedTableProps) {
         )}
       </div>
 
-      <div className="overflow-auto rounded-lg border border-gray-300 shadow-sm max-h-[calc(100vh-220px)]">
-        <table className="min-w-full border-collapse text-sm">
+      <p className="text-xs text-gray-500 md:hidden">
+        Geser ke kanan untuk melihat kolom periode
+      </p>
+
+      <div className="pl-table-scroll rounded-lg border border-gray-300 shadow-sm max-h-[calc(100vh-220px)]">
+        <table className="min-w-max border-collapse text-sm">
           <thead>
             <tr className="bg-orange-200 text-gray-900">
-              <th className="sticky left-0 top-0 z-20 min-w-[360px] border-b border-r border-gray-300 bg-orange-200 px-3 py-2 text-left font-semibold">
+              <th className="sticky top-0 z-20 min-w-[200px] border-b border-r border-gray-300 bg-orange-200 px-3 py-2 text-left font-semibold md:sticky md:left-0 md:min-w-[360px]">
                 Text for B/S P&L item
               </th>
               {periods.map((period) => (
                 <th
                   key={period}
-                  className="sticky top-0 z-10 min-w-[130px] border-b border-gray-300 bg-orange-200 px-3 py-2 text-right font-semibold whitespace-nowrap"
+                  className="sticky top-0 z-10 min-w-[120px] border-b border-gray-300 bg-orange-200 px-3 py-2 text-right font-semibold whitespace-nowrap"
                 >
                   {period}
                 </th>
@@ -427,7 +431,7 @@ export function PLGroupedTable({ periods, rows }: PLGroupedTableProps) {
                   }`}
                 >
                   <td
-                    className="sticky left-0 z-10 border-r border-gray-200 bg-inherit px-2 py-1.5 align-middle"
+                    className="min-w-[200px] border-r border-gray-200 bg-inherit px-2 py-1.5 align-middle md:sticky md:left-0 md:z-10 md:min-w-[360px]"
                     style={{ paddingLeft: isDetail ? "28px" : "8px" }}
                   >
                     <div className="flex items-center gap-2">

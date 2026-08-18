@@ -4,11 +4,11 @@ export function PLTableShimmer() {
 
   return (
     <div className="overflow-hidden rounded-lg border border-gray-300">
-      <div className="overflow-auto max-h-[calc(100vh-220px)]">
-        <table className="min-w-full border-collapse">
+      <div className="pl-table-scroll max-h-[calc(100vh-220px)]">
+        <table className="min-w-max border-collapse">
           <thead>
             <tr className="bg-orange-200">
-              <th className="min-w-[360px] border-b border-r border-gray-300 px-3 py-3">
+              <th className="min-w-[200px] border-b border-r border-gray-300 px-3 py-3 md:min-w-[360px]">
                 <div className="shimmer h-4 w-48 rounded" />
               </th>
               {cols.map((col) => (

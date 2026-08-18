@@ -1,6 +1,8 @@
 "use client";
 
 import { ActionsDropdown } from "@/components/ActionsDropdown";
+import { InstallPrompt } from "@/components/InstallPrompt";
+import { OfflineStatusBanner } from "@/components/OfflineStatusBanner";
 import { PLGroupedTable } from "@/components/PLGroupedTable";
 import { PLTableShimmer } from "@/components/PLTableShimmer";
 import { usePLReport } from "@/hooks/usePLReport";
@@ -53,9 +55,12 @@ export default function HomePage() {
           </div>
         </header>
 
+        <InstallPrompt />
+        <OfflineStatusBanner />
+
         {isLoading && <PLTableShimmer />}
 
-        {error && (
+        {error && !data && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
             {(error as Error).message}
           </div>

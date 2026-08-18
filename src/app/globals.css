@@ -17,6 +17,13 @@ body {
   color: var(--foreground);
 }
 
+.pl-table-scroll {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+}
+
 .group-toggle-btn {
   box-sizing: border-box;
   display: inline-grid;

@@ -16,5 +16,12 @@ export function usePLReport(year: string = "2026") {
   return useQuery({
     queryKey: ["pl-report", year],
     queryFn: () => fetchPLReport(year),
+    networkMode: "offlineFirst",
+    staleTime: 5 * 60 * 1000,
+    gcTime: 7 * 24 * 60 * 60 * 1000,
+    retry: (failureCount) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) return false;
+      return failureCount < 1;
+    },
   });
 }
