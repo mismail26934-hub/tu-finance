@@ -6,6 +6,7 @@ import {
   NEGATIVE_FORMAT_OPTIONS,
   type NegativeFormat,
 } from "@/lib/format-number";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import { useReportUIStore } from "@/stores/report-ui-store";
 
 function MenuSeparator() {
@@ -58,6 +59,7 @@ export function ActionsDropdown() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [open, setOpen] = useState(false);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -66,6 +68,7 @@ export function ActionsDropdown() {
   const negativeFormat = useReportUIStore((s) => s.negativeFormat);
   const setNegativeFormat = useReportUIStore((s) => s.setNegativeFormat);
   const setExportMode = useReportUIStore((s) => s.setExportMode);
+  const { canInstall, isIOS, hasNativePrompt, install } = useInstallPrompt();
 
   useEffect(() => {
     if (!open) return;
@@ -84,6 +87,15 @@ export function ActionsDropdown() {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!showInstallHelp) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowInstallHelp(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showInstallHelp]);
 
   useEffect(() => {
     if (!pendingFile) return;
@@ -149,6 +161,15 @@ export function ActionsDropdown() {
     setOpen(false);
   };
 
+  const handleInstall = async () => {
+    setOpen(false);
+    if (hasNativePrompt) {
+      await install();
+      return;
+    }
+    setShowInstallHelp(true);
+  };
+
   return (
     <>
       <input
@@ -203,6 +224,15 @@ export function ActionsDropdown() {
                 {option.label}
               </MenuItem>
             ))}
+
+            {canInstall && (
+              <>
+                <MenuSeparator />
+                <MenuItem onClick={handleInstall}>
+                  Pasang FinView di HP
+                </MenuItem>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -212,6 +242,57 @@ export function ActionsDropdown() {
       )}
       {uploadError && !pendingFile && (
         <p className="text-xs text-red-700">{uploadError}</p>
+      )}
+
+      {showInstallHelp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setShowInstallHelp(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="install-modal-title"
+            className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2
+              id="install-modal-title"
+              className="text-lg font-semibold text-gray-900"
+            >
+              Pasang FinView di HP
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              {isIOS
+                ? "Agar bisa dibuka tanpa jaringan, pasang FinView ke Home Screen."
+                : "Setelah dipasang, buka sekali saat online supaya data tersimpan."}
+            </p>
+            <div className="mt-4 space-y-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+              {isIOS ? (
+                <>
+                  <p>1. Ketuk tombol Share di Safari</p>
+                  <p>2. Pilih &quot;Add to Home Screen&quot;</p>
+                  <p>3. Ketuk &quot;Add&quot;</p>
+                </>
+              ) : (
+                <>
+                  <p>1. Buka menu browser (⋮)</p>
+                  <p>2. Pilih &quot;Install app&quot; atau &quot;Add to Home screen&quot;</p>
+                  <p>3. Buka FinView sekali saat online</p>
+                </>
+              )}
+            </div>
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowInstallHelp(false)}
+                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {pendingFile && (

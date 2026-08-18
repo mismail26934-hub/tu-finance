@@ -1,7 +1,6 @@
 "use client";
 
 import { ActionsDropdown } from "@/components/ActionsDropdown";
-import { InstallPrompt } from "@/components/InstallPrompt";
 import { OfflineStatusBanner } from "@/components/OfflineStatusBanner";
 import { PLGroupedTable } from "@/components/PLGroupedTable";
 import { PLTableShimmer } from "@/components/PLTableShimmer";
@@ -55,7 +54,6 @@ export default function HomePage() {
           </div>
         </header>
 
-        <InstallPrompt />
         <OfflineStatusBanner />
 
         {isLoading && <PLTableShimmer />}
