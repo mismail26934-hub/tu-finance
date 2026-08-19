@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePLReport } from "@/hooks/usePLReport";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useReportUIStore } from "@/stores/report-ui-store";
@@ -13,9 +14,17 @@ function formatSyncedAt(timestamp: number) {
 }
 
 export function OfflineStatusBanner() {
+  const [mounted, setMounted] = useState(false);
   const year = useReportUIStore((s) => s.year);
   const online = useOnlineStatus();
   const { data, dataUpdatedAt, isError } = usePLReport(year);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   const syncedAt = formatSyncedAt(dataUpdatedAt);
 
   if (!online && data) {

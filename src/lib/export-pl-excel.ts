@@ -111,6 +111,9 @@ export function exportPLToExcel(
       ...periods.map((period) => {
         const value = row.values[period];
         if (value == null) return null;
+        if (/^YTD(\s|$)/i.test(period.trim()) && Math.abs(value) < 0.005) {
+          return null;
+        }
         if (isPercentRow(row.label)) {
           return Math.abs(value) <= 1 ? value : value / 100;
         }

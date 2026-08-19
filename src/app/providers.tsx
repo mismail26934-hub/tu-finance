@@ -29,7 +29,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       persistOptions={{
         persister: queryPersister,
         maxAge: WEEK_MS,
-        buster: "pl-report-v1",
+        buster: "pl-report-v2",
         dehydrateOptions: {
           shouldDehydrateQuery: (query) =>
             query.queryKey[0] === "pl-report" &&

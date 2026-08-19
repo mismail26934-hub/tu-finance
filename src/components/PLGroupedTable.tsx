@@ -10,6 +10,30 @@ import {
 } from "@/stores/report-ui-store";
 import type { NegativeFormat } from "@/lib/format-number";
 
+function isYtdPeriod(period: string): boolean {
+  return /^YTD(\s|$)/i.test(period.trim());
+}
+
+function isZeroOrBlankYtdValue(value: number | string | null | undefined): boolean {
+  if (value == null || value === "") return true;
+  const text = String(value).trim().replace(/,/g, "");
+  if (!text || text === "-" || text === "—" || text === "–") return true;
+  if (/^0+(\.0+)?$/.test(text)) return true;
+  const numeric = typeof value === "number" ? value : Number(text);
+  if (!Number.isFinite(numeric)) return true;
+  return Math.abs(numeric) < 0.005;
+}
+
+function hasZeroOrBlankYtd(row: PLRow, periods: string[]): boolean {
+  const ytdPeriods = periods.filter(isYtdPeriod);
+  if (ytdPeriods.length === 0) return false;
+  return ytdPeriods.every((period) => isZeroOrBlankYtdValue(row.values[period]));
+}
+
+function isUngroupedRow(row: PLRow): boolean {
+  return row.rowType === "detail" || Boolean(row.parentLabel);
+}
+
 function formatValue(
   row: PLRow,
   period: string,
@@ -17,6 +41,8 @@ function formatValue(
 ): string {
   const value = row.values[period];
   const isPercentRow = /\(%\)/.test(row.label) || /%$/.test(row.label.trim());
+
+  if (isYtdPeriod(period) && isZeroOrBlankYtdValue(value)) return "";
 
   if (isPercentRow) {
     if (value == null) return "";
@@ -84,34 +110,75 @@ function collectDescendantKeys(rootLabel: string, rowsByLabel: Map<string, PLRow
 function isHiddenByCollapsedAncestor(
   row: PLRow,
   parentMap: Map<string, string>,
-  collapsed: Set<string>
+  expanded: Set<string>
 ): boolean {
-  let parentKey = parentMap.get(normalizeLabel(row.label));
-  while (parentKey) {
-    if (collapsed.has(parentKey)) return true;
+  const rowKey = normalizeLabel(row.label);
+
+  if (
+    rowKey !== "MARGIN" &&
+    /^MARGIN(\s|\(|$)/i.test(row.label.trim()) &&
+    !expanded.has("MARGIN")
+  ) {
+    return true;
+  }
+
+  if (row.parentLabel && !expanded.has(normalizeLabel(row.parentLabel))) {
+    return true;
+  }
+
+  let parentKey = parentMap.get(rowKey);
+  const seen = new Set<string>();
+  while (parentKey && !seen.has(parentKey)) {
+    if (!expanded.has(parentKey)) return true;
+    seen.add(parentKey);
     parentKey = parentMap.get(parentKey);
   }
   return false;
 }
 
-function getDefaultCollapsed(rows: PLRow[]): Set<string> {
-  const collapsed = new Set<string>();
-  for (const row of rows) {
-    if (!row.childLabels?.length) continue;
-    const hasDetailChild = row.childLabels.some((child) =>
-      /^\d/.test(child.trim())
-    );
-    if (hasDetailChild) {
-      collapsed.add(normalizeLabel(row.label));
-    }
-  }
-  return collapsed;
+function labelPaddingLeft(row: PLRow): string {
+  const key = normalizeLabel(row.label);
+  if (row.rowType === "total") return "8px";
+  if (key === "OPERATING PROFIT" || key === "PBT / PAT") return "8px";
+  if (row.parentLabel || row.rowType === "detail") return "28px";
+  return "8px";
 }
 
 function collectExpandableKeys(rows: PLRow[]): string[] {
   return rows
     .filter((row) => (row.childLabels?.length ?? 0) > 0)
     .map((row) => normalizeLabel(row.label));
+}
+
+const DEFAULT_EXPANDED_LABELS = new Set([
+  "TOTAL REVENUE",
+  "TOTAL COS",
+  "TOTAL OHD",
+]);
+
+function getDefaultExpanded(rows: PLRow[]): Set<string> {
+  const parentMap = buildParentMap(rows);
+  const expanded = new Set<string>();
+
+  for (const row of rows) {
+    const key = normalizeLabel(row.label);
+    if (!DEFAULT_EXPANDED_LABELS.has(key)) continue;
+    if ((row.childLabels?.length ?? 0) === 0) continue;
+
+    expanded.add(key);
+
+    let parentKey =
+      parentMap.get(key) ??
+      (row.parentLabel ? normalizeLabel(row.parentLabel) : "");
+    const seen = new Set<string>();
+    while (parentKey && !seen.has(parentKey)) {
+      expanded.add(parentKey);
+      seen.add(parentKey);
+      parentKey = parentMap.get(parentKey) ?? "";
+    }
+  }
+
+  return expanded;
 }
 
 function GroupToggleButton({
@@ -247,14 +314,14 @@ export function PLGroupedTable({ periods, rows }: PLGroupedTableProps) {
   const expandableKeys = useMemo(() => collectExpandableKeys(rows), [rows]);
 
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(
-    () => getDefaultCollapsed(rows)
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => getDefaultExpanded(rows)
   );
 
-  useEffect(() => {
-    setCollapsed(getDefaultCollapsed(rows));
-    setActiveFilter(null);
-  }, [rows]);
+  const collapsed = useMemo(
+    () => new Set(expandableKeys.filter((key) => !expanded.has(key))),
+    [expandableKeys, expanded]
+  );
 
   const filterScope = useMemo(() => {
     if (!activeFilter) return null;
@@ -271,18 +338,20 @@ export function PLGroupedTable({ periods, rows }: PLGroupedTableProps) {
     }
 
     return nextRows.filter(
-      (row) => !isHiddenByCollapsedAncestor(row, parentMap, collapsed)
+      (row) =>
+        !isHiddenByCollapsedAncestor(row, parentMap, expanded) &&
+        !(isUngroupedRow(row) && hasZeroOrBlankYtd(row, periods))
     );
-  }, [rows, parentMap, collapsed, filterOnExpand, filterScope]);
+  }, [rows, parentMap, expanded, filterOnExpand, filterScope, periods]);
 
   const toggle = (label: string) => {
     const key = normalizeLabel(label);
-    const wasCollapsed = collapsed.has(key);
+    const wasCollapsed = !expanded.has(key);
 
-    setCollapsed((prev) => {
+    setExpanded((prev) => {
       const next = new Set(prev);
-      if (wasCollapsed) next.delete(key);
-      else next.add(key);
+      if (wasCollapsed) next.add(key);
+      else next.delete(key);
       return next;
     });
 
@@ -300,16 +369,16 @@ export function PLGroupedTable({ periods, rows }: PLGroupedTableProps) {
 
   const clearFilter = () => {
     setActiveFilter(null);
-    setCollapsed(getDefaultCollapsed(rows));
+    setExpanded(getDefaultExpanded(rows));
   };
 
   const expandAll = () => {
-    setCollapsed(new Set());
+    setExpanded(new Set(expandableKeys));
     if (filterOnExpand) setActiveFilter(null);
   };
 
   const collapseAll = () => {
-    setCollapsed(new Set(expandableKeys));
+    setExpanded(new Set());
     setActiveFilter(null);
   };
 
@@ -318,13 +387,18 @@ export function PLGroupedTable({ periods, rows }: PLGroupedTableProps) {
     : null;
 
   const exportRows = useMemo(() => {
+    let nextRows = rows;
+
     if (filterOnExpand && filterScope) {
-      return rows.filter((row) =>
+      nextRows = rows.filter((row) =>
         filterScope.has(normalizeLabel(row.label))
       );
     }
-    return rows;
-  }, [rows, filterOnExpand, filterScope]);
+
+    return nextRows.filter(
+      (row) => !(isUngroupedRow(row) && hasZeroOrBlankYtd(row, periods))
+    );
+  }, [rows, filterOnExpand, filterScope, periods]);
 
   const filteredFilename = `P&L ${
     activeFilterLabel
@@ -418,8 +492,7 @@ export function PLGroupedTable({ periods, rows }: PLGroupedTableProps) {
             {visibleRows.map((row) => {
               const hasChildren = (row.childLabels?.length ?? 0) > 0;
               const rowKey = normalizeLabel(row.label);
-              const isCollapsed = collapsed.has(rowKey);
-              const isDetail = row.rowType === "detail";
+              const isCollapsed = hasChildren && !expanded.has(rowKey);
               const isFilteredRoot =
                 filterOnExpand && activeFilter === rowKey;
 
@@ -432,7 +505,7 @@ export function PLGroupedTable({ periods, rows }: PLGroupedTableProps) {
                 >
                   <td
                     className="min-w-[200px] border-r border-gray-200 bg-inherit px-2 py-1.5 align-middle md:sticky md:left-0 md:z-10 md:min-w-[360px]"
-                    style={{ paddingLeft: isDetail ? "28px" : "8px" }}
+                    style={{ paddingLeft: labelPaddingLeft(row) }}
                   >
                     <div className="flex items-center gap-2">
                       {hasChildren ? (
@@ -451,7 +524,9 @@ export function PLGroupedTable({ periods, rows }: PLGroupedTableProps) {
                       key={period}
                       className="px-3 py-1.5 text-right tabular-nums whitespace-nowrap"
                     >
-                      {formatValue(row, period, negativeFormat)}
+                      <span className="block w-full text-right">
+                        {formatValue(row, period, negativeFormat)}
+                      </span>
                     </td>
                   ))}
                 </tr>

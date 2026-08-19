@@ -105,7 +105,12 @@ function classifyRow(label: string, hasChildren: boolean): RowType {
   const upper = trimmed.toUpperCase();
 
   if (upper === "PROFIT AND LOSS STATEMENT") return "header";
-  if (/^TOTAL\s/.test(upper)) return "total";
+  if (/^TOTAL\s/.test(upper) || (hasChildren && upper === "MARGIN")) {
+    return "total";
+  }
+  if (hasChildren && /^MARGIN/.test(upper)) {
+    return "category";
+  }
   if (/^MARGIN/.test(upper) || /\(%\)/.test(upper)) return "metric";
   if (hasChildren) return "category";
   if (/^\d/.test(trimmed)) return "detail";
@@ -115,6 +120,46 @@ function classifyRow(label: string, hasChildren: boolean): RowType {
   if (isAllCaps) return "category";
 
   return "detail";
+}
+
+function isMarginChildLabel(label: string): boolean {
+  const upper = normalizeLabel(label).toUpperCase();
+  return upper !== "MARGIN" && /^MARGIN(\s|\(|$)/.test(upper);
+}
+
+function applyMarginGrouping(rows: PLRow[]): PLRow[] {
+  const parent = rows.find(
+    (row) => normalizeLabel(row.label).toUpperCase() === "MARGIN"
+  );
+  if (!parent) return rows;
+
+  const childLabels = rows
+    .filter((row) => isMarginChildLabel(row.label))
+    .map((row) => row.label);
+  if (childLabels.length === 0) return rows;
+
+  const childKeys = new Set(
+    childLabels.map((label) => normalizeLabel(label).toUpperCase())
+  );
+
+  return rows.map((row) => {
+    const key = normalizeLabel(row.label).toUpperCase();
+    if (key === "MARGIN") {
+      return {
+        ...row,
+        rowType: "total" as const,
+        childLabels,
+      };
+    }
+    if (childKeys.has(key)) {
+      return {
+        ...row,
+        parentLabel: parent.label,
+        rowType: "metric" as const,
+      };
+    }
+    return row;
+  });
 }
 
 function parseGuideWorkbook(workbook: XLSX.WorkBook): GuideEntry[] {
@@ -313,7 +358,9 @@ export function parsePLWorkbook(
 
   const guideEntries = loadGuideEntries(workbook, options?.guideBuffer);
   const { periods, rows: plRows } = parsePLValues(sheet, options?.periodFilter);
-  const flatRows = buildFlatRowsFromGuide(plRows, guideEntries);
+  const flatRows = applyMarginGrouping(
+    buildFlatRowsFromGuide(plRows, guideEntries)
+  );
 
   return {
     sheetName,

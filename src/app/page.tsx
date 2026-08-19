@@ -38,7 +38,11 @@ export default function HomePage() {
                 <div className="shimmer h-full w-full" />
               </div>
             )}
-            <PLGroupedTable periods={data.periods} rows={data.rows} />
+            <PLGroupedTable
+              key={`${year}-grouped-totals`}
+              periods={data.periods}
+              rows={data.rows}
+            />
           </div>
         )}
       </div>
